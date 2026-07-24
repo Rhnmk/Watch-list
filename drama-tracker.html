@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📺 Watch List</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card: #ffffff;
+    --ink: #2b2a28;
+    --sub: #8a8780;
+    --line: #e8e5de;
+    --accent: #b5895a;
+    --accent-soft: #f1e6d8;
+    --watching: #6b8f7a;
+    --watching-soft: #e6efe9;
+    --done: #8a8780;
+    --done-soft: #eeece7;
+    --plan: #b5895a;
+    --plan-soft: #f1e6d8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 32px 20px 80px;
+  }
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  h1 {
+    font-size: 21px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    margin: 0;
+  }
+  .count {
+    font-size: 13px;
+    color: var(--sub);
+  }
+  .add-box {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  .add-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  input[type="text"], input[type="number"], select, textarea {
+    font-family: inherit;
+    font-size: 14px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 9px 10px;
+    background: #fff;
+    color: var(--ink);
+    outline: none;
+  }
+  input[type="text"]:focus, input[type="number"]:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+  }
+  #title-input { flex: 1; min-width: 0; }
+  #status-input { width: 108px; flex-shrink: 0; }
+  #episode-input, #total-input { flex: 1; min-width: 0; }
+  textarea {
+    width: 100%;
+    resize: none;
+    min-height: 36px;
+    margin-bottom: 10px;
+  }
+  .add-btn {
+    width: 100%;
+    background: var(--ink);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .add-btn:active { opacity: 0.85; }
+  .cour-bar {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    margin-bottom: 14px;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+  .cour-bar::-webkit-scrollbar { display: none; }
+  .cour-tab {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--sub);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .cour-tab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .cour-x {
+    font-size: 12px;
+    opacity: 0.7;
+    line-height: 1;
+  }
+  .cour-x:hover { opacity: 1; }
+  #cour-add-btn {
+    flex-shrink: 0;
+    padding: 7px 12px;
+    border-radius: 100px;
+    font-size: 13px;
+    border: 1px dashed var(--line);
+    background: transparent;
+    color: var(--sub);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .cour-add-form {
+    flex-shrink: 0;
+    display: flex;
+    gap: 6px;
+  }
+  #new-cour-input {
+    width: 150px;
+    flex-shrink: 0;
+  }
+  #cour-add-confirm, #cour-add-cancel {
+    flex-shrink: 0;
+    padding: 0 12px;
+    border-radius: 100px;
+    font-size: 13px;
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .sort-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 10px;
+  }
+  #sort-input {
+    font-size: 13px;
+    padding: 6px 8px;
+  }
+  .tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+  .tab {
+    flex: 1;
+    text-align: center;
+    padding: 8px 4px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--sub);
+    background: transparent;
+    border: 1px solid var(--line);
+    cursor: pointer;
+  }
+  .tab.active {
+    background: var(--ink);
+    color: #fff;
+    border-color: var(--ink);
+  }
+  .list { display: flex; flex-direction: column; gap: 8px; }
+  .item {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 13px 14px;
+  }
+  .item-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .item-title {
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.4;
+    outline: none;
+  }
+  .item-title[contenteditable]:focus {
+    border-bottom: 1px dashed var(--accent);
+  }
+  .badge {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 100px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .badge.watching { background: var(--watching-soft); color: var(--watching); }
+  .badge.done { background: var(--done-soft); color: var(--done); }
+  .badge.plan { background: var(--plan-soft); color: var(--plan); }
+  .item-meta {
+    font-size: 12px;
+    color: var(--accent);
+    margin-top: 4px;
+  }
+  .item-memo {
+    font-size: 13px;
+    color: var(--sub);
+    margin-top: 6px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+  }
+  .item-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 10px;
+  }
+  .item-actions button {
+    font-size: 12px;
+    color: var(--sub);
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .move-btn {
+    text-decoration: none !important;
+    font-size: 14px !important;
+  }
+  .status-select-inline {
+    font-size: 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 3px 6px;
+    background: #fff;
+    color: var(--ink);
+  }
+  .backup-row {
+    display: flex;
+    gap: 14px;
+    margin: -14px 0 20px;
+  }
+  .backup-row button {
+    font-size: 12px;
+    color: var(--sub);
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .empty {
+    text-align: center;
+    color: var(--sub);
+    font-size: 13px;
+    padding: 40px 0;
+  }
+  .loading {
+    text-align: center;
+    color: var(--sub);
+    font-size: 13px;
+    padding: 40px 0;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>📺 Watch List</h1>
+    <span class="count" id="count-label"></span>
+  </header>
+
+  <div class="backup-row">
+    <button id="export-btn">データを書き出し</button>
+    <button id="import-btn">データを読み込み</button>
+    <input type="file" id="import-file" accept="application/json" style="display:none;">
+  </div>
+
+  <div class="cour-bar" id="cour-bar"></div>
+
+  <div class="add-box">
+    <div class="add-row">
+      <input type="text" id="title-input" placeholder="作品タイトルを入力">
+      <select id="status-input">
+        <option value="plan">視聴予定</option>
+        <option value="watching">視聴中</option>
+        <option value="done">視聴済み</option>
+      </select>
+    </div>
+    <div class="add-row">
+      <select id="day-input">
+        <option value="">曜日未定</option>
+        <option value="月">月曜</option>
+        <option value="火">火曜</option>
+        <option value="水">水曜</option>
+        <option value="木">木曜</option>
+        <option value="金">金曜</option>
+        <option value="土">土曜</option>
+        <option value="日">日曜</option>
+      </select>
+      <input type="text" id="time-input" placeholder="放送時間(例 22:00)">
+    </div>
+    <div class="add-row">
+      <input type="number" id="episode-input" placeholder="現在何話まで見た" min="0">
+      <input type="number" id="total-input" placeholder="全何話(任意)" min="0">
+    </div>
+    <textarea id="memo-input" placeholder="メモ・感想（任意）"></textarea>
+    <button class="add-btn" id="add-btn">追加する</button>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <div class="tab active" data-filter="all">すべて</div>
+    <div class="tab" data-filter="watching">視聴中</div>
+    <div class="tab" data-filter="plan">視聴予定</div>
+    <div class="tab" data-filter="done">視聴済み</div>
+  </div>
+
+  <div class="sort-row">
+    <select id="sort-input">
+      <option value="newest">追加順(新しい)</option>
+      <option value="oldest">追加順(古い)</option>
+      <option value="title">タイトル順</option>
+      <option value="episode">話数が多い順</option>
+      <option value="custom">カスタム(手動で並べ替え)</option>
+    </select>
+  </div>
+
+  <div class="loading" id="loading">読み込み中...</div>
+  <div class="list" id="list" style="display:none;"></div>
+</div>
+
+<script>
+const STATUS_LABEL = { watching: '視聴中', done: '視聴済み', plan: '視聴予定' };
+const STORAGE_KEY = 'drama-entries';
+
+let entries = [];
+let cours = [];
+let currentCour = '';
+let currentFilter = 'all';
+let addingCour = false;
+let sortMode = 'newest';
+
+function uid() {
+  return 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+function getDefaultCourName() {
+  const now = new Date();
+  return `${now.getFullYear()}年${now.getMonth() + 1}月`;
+}
+
+async function loadEntries() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    if (Array.isArray(parsed)) {
+      const def = getDefaultCourName();
+      cours = [def];
+      currentCour = def;
+      entries = parsed.map(e => ({ ...e, cour: def }));
+      await saveAll();
+    } else if (parsed && parsed.cours) {
+      cours = parsed.cours.length ? parsed.cours : [getDefaultCourName()];
+      currentCour = (parsed.currentCour && cours.includes(parsed.currentCour)) ? parsed.currentCour : cours[0];
+      entries = parsed.entries || [];
+    } else {
+      const def = getDefaultCourName();
+      cours = [def];
+      currentCour = def;
+      entries = [];
+    }
+  } catch (e) {
+    const def = getDefaultCourName();
+    cours = [def];
+    currentCour = def;
+    entries = [];
+  }
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('list').style.display = 'flex';
+  entries.forEach((en, i) => { if (en.order === undefined || en.order === null) en.order = i; });
+  migrateCourName('2026年夏クール', '2026年7月');
+  renderCourBar();
+  render();
+}
+
+function migrateCourName(oldName, newName) {
+  if (!cours.includes(oldName)) return;
+  const mergeInto = cours.includes(newName);
+  entries.forEach(e => { if (e.cour === oldName) e.cour = newName; });
+  cours = mergeInto ? cours.filter(c => c !== oldName) : cours.map(c => c === oldName ? newName : c);
+  if (currentCour === oldName) currentCour = newName;
+  saveAll();
+}
+
+async function saveAll() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ cours, currentCour, entries }));
+  } catch (e) {
+    console.error('save failed', e);
+  }
+}
+
+function switchCour(name) {
+  currentCour = name;
+  saveAll();
+  renderCourBar();
+  render();
+}
+
+function showAddCourForm() {
+  addingCour = true;
+  renderCourBar();
+}
+
+function cancelAddCour() {
+  addingCour = false;
+  renderCourBar();
+}
+
+function submitAddCour() {
+  const input = document.getElementById('new-cour-input');
+  const name = input.value.trim();
+  if (!name) return;
+  if (!cours.includes(name)) cours.push(name);
+  currentCour = name;
+  addingCour = false;
+  saveAll();
+  renderCourBar();
+  render();
+}
+
+function deleteCour(name) {
+  if (cours.length <= 1) return;
+  if (!confirm(`「${name}」を削除しますか？中の作品も削除されます。`)) return;
+  cours = cours.filter(c => c !== name);
+  entries = entries.filter(e => e.cour !== name);
+  if (currentCour === name) currentCour = cours[0];
+  saveAll();
+  renderCourBar();
+  render();
+}
+
+function renderCourBar() {
+  const bar = document.getElementById('cour-bar');
+  let html = cours.map(c => `
+    <button class="cour-tab ${c === currentCour ? 'active' : ''}" data-cour="${escapeHtml(c)}">
+      <span>${escapeHtml(c)}</span>
+      ${cours.length > 1 ? `<span class="cour-x" data-cour="${escapeHtml(c)}">×</span>` : ''}
+    </button>
+  `).join('');
+  if (addingCour) {
+    html += `<span class="cour-add-form">
+      <input type="text" id="new-cour-input" placeholder="例: 2026年秋クール">
+      <button id="cour-add-confirm">追加</button>
+      <button id="cour-add-cancel">×</button>
+    </span>`;
+  } else {
+    html += `<button id="cour-add-btn">+ ページ追加</button>`;
+  }
+  bar.innerHTML = html;
+  if (addingCour) {
+    const input = document.getElementById('new-cour-input');
+    input.focus();
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitAddCour(); });
+  }
+}
+
+function addEntry() {
+  const titleEl = document.getElementById('title-input');
+  const statusEl = document.getElementById('status-input');
+  const memoEl = document.getElementById('memo-input');
+  const dayEl = document.getElementById('day-input');
+  const timeEl = document.getElementById('time-input');
+  const episodeEl = document.getElementById('episode-input');
+  const totalEl = document.getElementById('total-input');
+  const title = titleEl.value.trim();
+  if (!title) { titleEl.focus(); return; }
+  entries.unshift({
+    id: uid(),
+    title,
+    status: statusEl.value,
+    cour: currentCour,
+    day: dayEl.value,
+    time: timeEl.value.trim(),
+    episode: episodeEl.value ? parseInt(episodeEl.value, 10) : null,
+    total: totalEl.value ? parseInt(totalEl.value, 10) : null,
+    memo: memoEl.value.trim(),
+    order: Date.now(),
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  });
+  titleEl.value = '';
+  memoEl.value = '';
+  statusEl.value = 'plan';
+  dayEl.value = '';
+  timeEl.value = '';
+  episodeEl.value = '';
+  totalEl.value = '';
+  saveAll();
+  render();
+}
+
+function deleteEntry(id) {
+  entries = entries.filter(e => e.id !== id);
+  saveAll();
+  render();
+}
+
+function updateStatus(id, status) {
+  const e = entries.find(e => e.id === id);
+  if (e) { e.status = status; e.updatedAt = Date.now(); }
+  saveAll();
+  render();
+}
+
+function incrementEpisode(id) {
+  const e = entries.find(e => e.id === id);
+  if (e) {
+    e.episode = (e.episode || 0) + 1;
+    e.updatedAt = Date.now();
+  }
+  saveAll();
+  render();
+}
+
+function decrementEpisode(id) {
+  const e = entries.find(e => e.id === id);
+  if (e) {
+    e.episode = Math.max((e.episode || 0) - 1, 0);
+    e.updatedAt = Date.now();
+  }
+  saveAll();
+  render();
+}
+
+function sortEntries(list) {
+  const arr = [...list];
+  if (sortMode === 'newest') {
+    arr.sort((a, b) => (b.createdAt || b.updatedAt || 0) - (a.createdAt || a.updatedAt || 0));
+  } else if (sortMode === 'oldest') {
+    arr.sort((a, b) => (a.createdAt || a.updatedAt || 0) - (b.createdAt || b.updatedAt || 0));
+  } else if (sortMode === 'title') {
+    arr.sort((a, b) => a.title.localeCompare(b.title, 'ja'));
+  } else if (sortMode === 'episode') {
+    arr.sort((a, b) => (b.episode || 0) - (a.episode || 0));
+  } else if (sortMode === 'custom') {
+    arr.sort((a, b) => (a.order || 0) - (b.order || 0));
+  }
+  return arr;
+}
+
+function moveEntry(id, dir) {
+  const inCour = entries.filter(e => e.cour === currentCour);
+  const filtered = currentFilter === 'all' ? inCour : inCour.filter(e => e.status === currentFilter);
+  const sorted = sortEntries(filtered);
+  const idx = sorted.findIndex(e => e.id === id);
+  const swapIdx = idx + dir;
+  if (idx < 0 || swapIdx < 0 || swapIdx >= sorted.length) return;
+  const a = sorted[idx];
+  const b = sorted[swapIdx];
+  const tmp = a.order || 0;
+  a.order = b.order || 0;
+  b.order = tmp;
+  saveAll();
+  render();
+}
+
+function render() {
+  const list = document.getElementById('list');
+  const inCour = entries.filter(e => e.cour === currentCour);
+  let filtered = currentFilter === 'all' ? inCour : inCour.filter(e => e.status === currentFilter);
+  filtered = sortEntries(filtered);
+
+  document.getElementById('count-label').textContent = inCour.length ? `${inCour.length}件` : '';
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="empty">まだ作品がありません。上のフォームから追加してください。</div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(e => `
+    <div class="item">
+      <div class="item-top">
+        <div class="item-title" contenteditable="true" spellcheck="false" data-id="${e.id}">${escapeHtml(e.title)}</div>
+        <span class="badge ${e.status}">${STATUS_LABEL[e.status]}</span>
+      </div>
+      ${(e.day || e.time) ? `<div class="item-meta">${e.day ? escapeHtml(e.day) + '曜' : ''}${e.day && e.time ? ' ' : ''}${e.time ? escapeHtml(e.time) : ''}</div>` : ''}
+      ${(e.episode !== null && e.episode !== undefined) ? `<div class="item-meta">第${e.episode}話${e.total ? ' / 全' + e.total + '話' : ''}まで視聴</div>` : ''}
+      ${e.memo ? `<div class="item-memo">${escapeHtml(e.memo)}</div>` : ''}
+      <div class="item-actions">
+        ${sortMode === 'custom' ? `<button class="move-btn" onclick="moveEntry('${e.id}', -1)">▲</button><button class="move-btn" onclick="moveEntry('${e.id}', 1)">▼</button>` : ''}
+        <select class="status-select-inline" onchange="updateStatus('${e.id}', this.value)">
+          <option value="plan" ${e.status === 'plan' ? 'selected' : ''}>視聴予定</option>
+          <option value="watching" ${e.status === 'watching' ? 'selected' : ''}>視聴中</option>
+          <option value="done" ${e.status === 'done' ? 'selected' : ''}>視聴済み</option>
+        </select>
+        <button onclick="decrementEpisode('${e.id}')">-1話</button>
+        <button onclick="incrementEpisode('${e.id}')">+1話</button>
+        <button onclick="deleteEntry('${e.id}')">削除</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+document.getElementById('add-btn').addEventListener('click', addEntry);
+document.getElementById('title-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') addEntry();
+});
+document.getElementById('tabs').addEventListener('click', (e) => {
+  const tab = e.target.closest('.tab');
+  if (!tab) return;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  currentFilter = tab.dataset.filter;
+  render();
+});
+
+document.getElementById('export-btn').addEventListener('click', () => {
+  const data = JSON.stringify({ cours, currentCour, entries }, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `watch-list-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('import-btn').addEventListener('click', () => {
+  document.getElementById('import-file').click();
+});
+
+document.getElementById('import-file').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(reader.result);
+      if (Array.isArray(parsed)) {
+        const def = getDefaultCourName();
+        cours = [def];
+        currentCour = def;
+        entries = parsed.map(en => ({ ...en, cour: en.cour || def }));
+      } else if (parsed && parsed.cours) {
+        cours = parsed.cours.length ? parsed.cours : [getDefaultCourName()];
+        currentCour = (parsed.currentCour && cours.includes(parsed.currentCour)) ? parsed.currentCour : cours[0];
+        entries = parsed.entries || [];
+      } else {
+        alert('ファイルの形式が正しくありません');
+        return;
+      }
+      entries.forEach((en, i) => { if (en.order === undefined || en.order === null) en.order = i; });
+      saveAll();
+      renderCourBar();
+      render();
+      alert('読み込みが完了しました');
+    } catch (err) {
+      alert('読み込みに失敗しました。ファイルを確認してください。');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+document.getElementById('sort-input').addEventListener('change', (e) => {
+  sortMode = e.target.value;
+  render();
+});
+
+document.getElementById('list').addEventListener('focusout', (e) => {
+  const el = e.target.closest('.item-title');
+  if (!el) return;
+  const id = el.dataset.id;
+  const entry = entries.find(x => x.id === id);
+  const newTitle = el.textContent.trim();
+  if (!entry) return;
+  if (!newTitle) {
+    el.textContent = entry.title;
+    return;
+  }
+  if (newTitle !== entry.title) {
+    entry.title = newTitle;
+    entry.updatedAt = Date.now();
+    saveAll();
+  }
+});
+document.getElementById('list').addEventListener('keydown', (e) => {
+  if (e.target.closest('.item-title') && e.key === 'Enter') {
+    e.preventDefault();
+    e.target.blur();
+  }
+});
+
+document.getElementById('cour-bar').addEventListener('click', (e) => {
+  const x = e.target.closest('.cour-x');
+  if (x) { deleteCour(x.dataset.cour); return; }
+  const tab = e.target.closest('.cour-tab');
+  if (tab) { switchCour(tab.dataset.cour); return; }
+  if (e.target.closest('#cour-add-btn')) { showAddCourForm(); return; }
+  if (e.target.closest('#cour-add-confirm')) { submitAddCour(); return; }
+  if (e.target.closest('#cour-add-cancel')) { cancelAddCour(); return; }
+});
+
+loadEntries();
+</script>
+</body>
+</html>
