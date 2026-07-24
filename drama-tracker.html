@@ -76,7 +76,7 @@
   }
   #title-input { flex: 1; min-width: 0; }
   #status-input { width: 108px; flex-shrink: 0; }
-  #episode-input, #total-input { flex: 1; min-width: 0; }
+  #episode-input, #startdate-input { flex: 1; min-width: 0; }
   textarea {
     width: 100%;
     resize: none;
@@ -130,6 +130,11 @@
     line-height: 1;
   }
   .cour-x:hover { opacity: 1; }
+  .cour-edit {
+    font-size: 11px;
+    opacity: 0.85;
+    line-height: 1;
+  }
   #cour-add-btn {
     flex-shrink: 0;
     padding: 7px 12px;
@@ -227,6 +232,19 @@
     font-size: 12px;
     color: var(--accent);
     margin-top: 4px;
+  }
+  .startdate-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .start-date-inline {
+    font-size: 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 2px 6px;
+    color: var(--ink);
+    background: #fff;
   }
   .item-memo {
     font-size: 13px;
@@ -329,8 +347,8 @@
       <input type="text" id="time-input" placeholder="放送時間(例 22:00)">
     </div>
     <div class="add-row">
+      <input type="date" id="startdate-input" title="放送開始日">
       <input type="number" id="episode-input" placeholder="現在何話まで見た" min="0">
-      <input type="number" id="total-input" placeholder="全何話(任意)" min="0">
     </div>
     <textarea id="memo-input" placeholder="メモ・感想（任意）"></textarea>
     <button class="add-btn" id="add-btn">追加する</button>
@@ -346,7 +364,7 @@
   <div class="sort-row">
     <select id="sort-input">
       <option value="newest">追加順(新しい)</option>
-      <option value="oldest">追加順(古い)</option>
+      <option value="oldest" selected>追加順(古い)</option>
       <option value="title">タイトル順</option>
       <option value="episode">話数が多い順</option>
       <option value="custom">カスタム(手動で並べ替え)</option>
@@ -366,7 +384,8 @@ let cours = [];
 let currentCour = '';
 let currentFilter = 'all';
 let addingCour = false;
-let sortMode = 'newest';
+let renamingCour = null;
+let sortMode = 'oldest';
 
 function uid() {
   return 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -468,14 +487,52 @@ function deleteCour(name) {
   render();
 }
 
+function showRenameCourForm(name) {
+  renamingCour = name;
+  renderCourBar();
+}
+
+function cancelRenameCour() {
+  renamingCour = null;
+  renderCourBar();
+}
+
+function submitRenameCour(oldName) {
+  const input = document.getElementById('rename-cour-input');
+  const newName = input.value.trim();
+  renamingCour = null;
+  if (!newName || newName === oldName) { renderCourBar(); return; }
+  if (cours.includes(newName)) {
+    entries.forEach(e => { if (e.cour === oldName) e.cour = newName; });
+    cours = cours.filter(c => c !== oldName);
+  } else {
+    cours = cours.map(c => c === oldName ? newName : c);
+    entries.forEach(e => { if (e.cour === oldName) e.cour = newName; });
+  }
+  if (currentCour === oldName) currentCour = newName;
+  saveAll();
+  renderCourBar();
+  render();
+}
+
 function renderCourBar() {
   const bar = document.getElementById('cour-bar');
-  let html = cours.map(c => `
+  let html = cours.map(c => {
+    if (c === renamingCour) {
+      return `<span class="cour-add-form">
+        <input type="text" id="rename-cour-input" value="${escapeHtml(c)}">
+        <button id="rename-cour-confirm" data-cour="${escapeHtml(c)}">保存</button>
+        <button id="rename-cour-cancel">×</button>
+      </span>`;
+    }
+    return `
     <button class="cour-tab ${c === currentCour ? 'active' : ''}" data-cour="${escapeHtml(c)}">
       <span>${escapeHtml(c)}</span>
+      ${c === currentCour ? `<span class="cour-edit" data-cour="${escapeHtml(c)}">✎</span>` : ''}
       ${cours.length > 1 ? `<span class="cour-x" data-cour="${escapeHtml(c)}">×</span>` : ''}
     </button>
-  `).join('');
+  `;
+  }).join('');
   if (addingCour) {
     html += `<span class="cour-add-form">
       <input type="text" id="new-cour-input" placeholder="例: 2026年秋クール">
@@ -491,6 +548,12 @@ function renderCourBar() {
     input.focus();
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitAddCour(); });
   }
+  if (renamingCour) {
+    const input = document.getElementById('rename-cour-input');
+    input.focus();
+    input.select();
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitRenameCour(renamingCour); });
+  }
 }
 
 function addEntry() {
@@ -500,7 +563,7 @@ function addEntry() {
   const dayEl = document.getElementById('day-input');
   const timeEl = document.getElementById('time-input');
   const episodeEl = document.getElementById('episode-input');
-  const totalEl = document.getElementById('total-input');
+  const startdateEl = document.getElementById('startdate-input');
   const title = titleEl.value.trim();
   if (!title) { titleEl.focus(); return; }
   entries.unshift({
@@ -511,7 +574,7 @@ function addEntry() {
     day: dayEl.value,
     time: timeEl.value.trim(),
     episode: episodeEl.value ? parseInt(episodeEl.value, 10) : null,
-    total: totalEl.value ? parseInt(totalEl.value, 10) : null,
+    startDate: startdateEl.value || null,
     memo: memoEl.value.trim(),
     order: Date.now(),
     createdAt: Date.now(),
@@ -523,7 +586,7 @@ function addEntry() {
   dayEl.value = '';
   timeEl.value = '';
   episodeEl.value = '';
-  totalEl.value = '';
+  startdateEl.value = '';
   saveAll();
   render();
 }
@@ -613,7 +676,8 @@ function render() {
         <span class="badge ${e.status}">${STATUS_LABEL[e.status]}</span>
       </div>
       ${(e.day || e.time) ? `<div class="item-meta">${e.day ? escapeHtml(e.day) + '曜' : ''}${e.day && e.time ? ' ' : ''}${e.time ? escapeHtml(e.time) : ''}</div>` : ''}
-      ${(e.episode !== null && e.episode !== undefined) ? `<div class="item-meta">第${e.episode}話${e.total ? ' / 全' + e.total + '話' : ''}まで視聴</div>` : ''}
+      ${(e.episode !== null && e.episode !== undefined) ? `<div class="item-meta">第${e.episode}話まで視聴</div>` : ''}
+      <div class="item-meta startdate-row">放送開始日: <input type="date" class="start-date-inline" value="${e.startDate || ''}" data-id="${e.id}"></div>
       ${e.memo ? `<div class="item-memo">${escapeHtml(e.memo)}</div>` : ''}
       <div class="item-actions">
         ${sortMode === 'custom' ? `<button class="move-btn" onclick="moveEntry('${e.id}', -1)">▲</button><button class="move-btn" onclick="moveEntry('${e.id}', 1)">▼</button>` : ''}
@@ -699,6 +763,17 @@ document.getElementById('import-file').addEventListener('change', (e) => {
   e.target.value = '';
 });
 
+document.getElementById('list').addEventListener('change', (e) => {
+  const dateInput = e.target.closest('.start-date-inline');
+  if (!dateInput) return;
+  const entry = entries.find(x => x.id === dateInput.dataset.id);
+  if (entry) {
+    entry.startDate = dateInput.value || null;
+    entry.updatedAt = Date.now();
+    saveAll();
+  }
+});
+
 document.getElementById('sort-input').addEventListener('change', (e) => {
   sortMode = e.target.value;
   render();
@@ -729,6 +804,8 @@ document.getElementById('list').addEventListener('keydown', (e) => {
 });
 
 document.getElementById('cour-bar').addEventListener('click', (e) => {
+  const edit = e.target.closest('.cour-edit');
+  if (edit) { showRenameCourForm(edit.dataset.cour); return; }
   const x = e.target.closest('.cour-x');
   if (x) { deleteCour(x.dataset.cour); return; }
   const tab = e.target.closest('.cour-tab');
@@ -736,6 +813,8 @@ document.getElementById('cour-bar').addEventListener('click', (e) => {
   if (e.target.closest('#cour-add-btn')) { showAddCourForm(); return; }
   if (e.target.closest('#cour-add-confirm')) { submitAddCour(); return; }
   if (e.target.closest('#cour-add-cancel')) { cancelAddCour(); return; }
+  if (e.target.closest('#rename-cour-confirm')) { submitRenameCour(renamingCour); return; }
+  if (e.target.closest('#rename-cour-cancel')) { cancelRenameCour(); return; }
 });
 
 loadEntries();
